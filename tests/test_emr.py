@@ -1,3 +1,4 @@
+import json
 import os
 
 import boto3
@@ -709,3 +710,33 @@ def test_emr_list_bootstrap_actions(emr):
     assert ba_list[1]["Args"] == []
 
     emr.terminate_job_flows(JobFlowIds=[cluster_id])
+
+
+def test_emr_timestamps_are_epoch_seconds(emr):
+    """EMR's JSON protocol has epoch-second timestamps; botocore parses an ISO
+    string too, so read the raw body."""
+    captured = {}
+
+    def grab(http_response, **_):
+        captured["body"] = json.loads(http_response.content)
+
+    cluster_id = emr.run_job_flow(
+        Name="epoch-ts",
+        ReleaseLabel="emr-6.15.0",
+        Instances={
+            "MasterInstanceType": "m5.xlarge",
+            "SlaveInstanceType": "m5.xlarge",
+            "InstanceCount": 1,
+            "KeepJobFlowAliveWhenNoSteps": True,
+        },
+        JobFlowRole="EMR_EC2_DefaultRole",
+        ServiceRole="EMR_DefaultRole",
+    )["JobFlowId"]
+    emr.meta.events.register("after-call.emr.DescribeCluster", grab)
+    try:
+        emr.describe_cluster(ClusterId=cluster_id)
+    finally:
+        emr.meta.events.unregister("after-call.emr.DescribeCluster", grab)
+        emr.terminate_job_flows(JobFlowIds=[cluster_id])
+    timeline = captured["body"]["Cluster"]["Status"]["Timeline"]
+    assert isinstance(timeline["CreationDateTime"], (int, float))

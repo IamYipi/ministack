@@ -9,6 +9,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **EMR — timestamps aws-sdk-go-v2 can read** — the `Timeline` dates of clusters, steps, instance groups and instance fleets and the block public access `CreationDateTime` are epoch seconds, as the EMR JSON protocol has them, instead of ISO strings that made `DescribeCluster`, `ListClusters` and the other reads fail to deserialize in Go (and Terraform). Contributed by @IamYipi.
 - **KMS — `GenerateDataKey` returns `KeyMaterialId`** — requests without `Recipient` now include the identifier of the wrapping key material. The identifier remains stable across requests and persistence reloads, and changes when the wrapping material changes. Fixes #1853.
 ### Added
 

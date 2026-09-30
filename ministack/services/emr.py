@@ -155,8 +155,10 @@ def _group_id():
     chars = string.ascii_uppercase + string.digits
     return "ig-" + "".join(random.choices(chars, k=13))
 
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+def _now():
+    # The EMR JSON protocol carries timestamps as epoch seconds; an ISO string
+    # fails deserialization in aws-sdk-go-v2 and other strict SDKs.
+    return int(time.time())
 
 # ---------------------------------------------------------------------------
 # Handlers
@@ -180,7 +182,7 @@ def _run_job_flow(data):
     job_flow_role = data.get("JobFlowRole", "EMR_EC2_DefaultRole")
     visible_to_all = data.get("VisibleToAllUsers", True)
     termination_protected = instances.get("TerminationProtected", False)
-    now = _now_iso()
+    now = _now()
 
     # Derive initial state: WAITING if keep_alive, else TERMINATED (no real execution)
     initial_state = "WAITING" if keep_alive else "TERMINATED"
@@ -363,7 +365,7 @@ def _set_visible_to_all_users(data):
 # ---------------------------------------------------------------------------
 
 def _make_step(step_config):
-    now = _now_iso()
+    now = _now()
     return {
         "Id": _step_id(),
         "Name": step_config.get("Name", ""),
@@ -439,7 +441,7 @@ def _add_instance_fleet(data):
         return error_response_json("InvalidRequestException",
                                    f"Cluster id '{cluster_id}' is not valid.", 400)
     fleet = data.get("InstanceFleet", {})
-    now = _now_iso()
+    now = _now()
     fleet_id = _fleet_id()
     record = {
         "Id": fleet_id,
@@ -495,7 +497,7 @@ def _add_instance_groups(data):
     if not cluster:
         return error_response_json("InvalidRequestException",
                                    f"Cluster id '{cluster_id}' is not valid.", 400)
-    now = _now_iso()
+    now = _now()
     group_ids = []
     for ig in data.get("InstanceGroups", []):
         gid = _group_id()
@@ -602,7 +604,7 @@ def _get_block_public_access_configuration(data):
     return json_response({
         "BlockPublicAccessConfiguration": _get_block_public_access(),
         "BlockPublicAccessConfigurationMetadata": {
-            "CreationDateTime": _now_iso(),
+            "CreationDateTime": _now(),
             "CreatedByArn": f"arn:aws:iam::{get_account_id()}:root",
         },
     })
