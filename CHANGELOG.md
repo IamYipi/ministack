@@ -9,6 +9,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Account — `AccountCreatedDate` as ISO 8601** — `GetAccountInformation` returned it as epoch seconds, but the model gives the member `timestampFormat: iso8601`, and aws-sdk-go-v2 failed to deserialize the response ("expected string"). Contributed by @IamYipi.
 - **KMS — `GenerateDataKey` returns `KeyMaterialId`** — requests without `Recipient` now include the identifier of the wrapping key material. The identifier remains stable across requests and persistence reloads, and changes when the wrapping material changes. Fixes #1853.
 ### Added
 

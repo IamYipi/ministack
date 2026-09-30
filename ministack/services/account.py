@@ -31,8 +31,10 @@ def _json(status, body):
 
 
 # Single fixed creation timestamp per process — AWS returns the original
-# account creation time, which doesn't change. int epoch seconds per memory.
-_CREATED_AT = int(time.time()) - (365 * 24 * 3600)
+# account creation time, which doesn't change. The model gives
+# AccountCreatedDate timestampFormat iso8601, so it is an ISO 8601 string on
+# the wire, not rest-json's default epoch seconds.
+_CREATED_AT = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 365 * 24 * 3600))
 
 
 def _get_account_information(_payload):

@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import urllib.request
@@ -74,3 +75,21 @@ def test_account_module_exposes_no_op_reset():
     from ministack.services import account
     assert callable(getattr(account, "reset", None))
     account.reset()
+
+
+def test_account_created_date_is_iso8601(acct):
+    """AccountCreatedDate has timestampFormat iso8601 in the model; botocore
+    parses epoch seconds too, so read the raw body."""
+    captured = {}
+
+    def grab(http_response, **_):
+        captured["body"] = json.loads(http_response.content)
+
+    acct.meta.events.register("after-call.account.GetAccountInformation", grab)
+    try:
+        acct.get_account_information()
+    finally:
+        acct.meta.events.unregister("after-call.account.GetAccountInformation", grab)
+    created = captured["body"]["AccountCreatedDate"]
+    assert isinstance(created, str)
+    datetime.datetime.strptime(created, "%Y-%m-%dT%H:%M:%SZ")
